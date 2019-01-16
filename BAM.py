@@ -10,22 +10,24 @@ Reference: [BMVC2018] BAM: Bottleneck Attention Module
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
+X = tf.placeholder(tf.float32, shape=[128, 32, 32, 256])
+
 batch_norm_params = {
                     # Decay for moving averages
                     'decay': 0.995,
                     # epsilon to prevent 0 in variance
                     'epsilon': 0.001,
                     # force in-place updates of mean and variances estimates
-                    'updates_collection': None,
+                    'updates_collections': None,
                     # moving averages ends up in the trainable variables collection
                     'variables_collections': [tf.GraphKeys.TRAINABLE_VARIABLES]}
                     
-def BAM(inputs, batch_norm_params, reduction_ratio=16, dilation_value=4, reuse=None, scope'BAM'):
+def BAM(inputs, batch_norm_params, reduction_ratio=16, dilation_value=4, reuse=None, scope='BAM'):
     with tf.variable_scope(scope, reuse=reuse):
         with slim.arg_scope([slim.conv2d, slim.fully_connected],
                             weights_initializer=slim.xavier_initializer(),
                             weights_regularizer=slim.l2_regularizer(0.0005)):
-            with slim.arg_scope([slim.conv2d], activation=None):
+            with slim.arg_scope([slim.conv2d], activation_fn=None):
                 
                 input_channel = inputs.get_shape().as_list()[-1]
                 num_squeeze = input_channel // reduction_ratio
@@ -33,7 +35,7 @@ def BAM(inputs, batch_norm_params, reduction_ratio=16, dilation_value=4, reuse=N
                 # Channel attention
                 gap = tf.reduce_mean(inputs, axis=[1, 2], keepdims=True)
                 channel = slim.fully_connected(gap, num_squeeze, activation_fn=None, scope='fc1')
-                channel = slim.fully_connected(fc1, input_channel, activation_fn=None,
+                channel = slim.fully_connected(channel, input_channel, activation_fn=None,
                 normalizer_fn=slim.batch_norm, normalizer_params=batch_norm_params, scope='fc2')
                 
                 # Spatial attention
@@ -48,5 +50,6 @@ def BAM(inputs, batch_norm_params, reduction_ratio=16, dilation_value=4, reuse=N
                 output = inputs + inputs * combined
                 
                 return output
-                
-                
+
+print(BAM(X, batch_norm_params).shape)
+
